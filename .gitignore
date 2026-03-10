@@ -1,0 +1,35 @@
+# Environment
+.env
+
+# Generated data
+data/products.csv
+data/user_interactions.csv
+
+# Search indexes
+search/faiss_index.bin
+search/product_id_map.json
+search/index_metadata.json
+search/bm25_index.pkl
+
+# RAG vectorstore
+assistant/vectorstore/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
