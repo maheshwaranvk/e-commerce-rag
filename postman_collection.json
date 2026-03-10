@@ -1,0 +1,367 @@
+{
+  "info": {
+    "name": "AI Commerce Platform",
+    "description": "API collection for the AI Commerce Platform with hybrid search, RAG assistant, and recommendations",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "Check API health and Redis connection status"
+      }
+    },
+    {
+      "name": "Search - Running Shoes",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"affordable running shoes under 4000\",\n  \"top_k\": 10\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/search",
+          "host": ["{{base_url}}"],
+          "path": ["search"]
+        },
+        "description": "Hybrid semantic + keyword search for running shoes"
+      }
+    },
+    {
+      "name": "Search - Wireless Headphones",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"wireless headphones for gym\",\n  \"top_k\": 5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/search",
+          "host": ["{{base_url}}"],
+          "path": ["search"]
+        },
+        "description": "Search for wireless headphones"
+      }
+    },
+    {
+      "name": "Search - Laptop for ML",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"laptop for machine learning under 60000\",\n  \"top_k\": 5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/search",
+          "host": ["{{base_url}}"],
+          "path": ["search"]
+        },
+        "description": "Search for laptops suitable for machine learning"
+      }
+    },
+    {
+      "name": "Search - Summer Dress",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"summer dress for women\",\n  \"top_k\": 8\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/search",
+          "host": ["{{base_url}}"],
+          "path": ["search"]
+        },
+        "description": "Search for women's summer dresses"
+      }
+    },
+    {
+      "name": "Assistant - Best Laptops for AI",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Compare the best laptops for AI model training\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/assistant/ask",
+          "host": ["{{base_url}}"],
+          "path": ["assistant", "ask"]
+        },
+        "description": "Ask RAG assistant about laptops for AI training"
+      }
+    },
+    {
+      "name": "Assistant - Home Workout Products",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"What are the best products for home workout?\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/assistant/ask",
+          "host": ["{{base_url}}"],
+          "path": ["assistant", "ask"]
+        },
+        "description": "Ask about home workout products"
+      }
+    },
+    {
+      "name": "Assistant - Smartwatch Battery Life",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"question\": \"Is there any smartwatch with long battery life?\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/assistant/ask",
+          "host": ["{{base_url}}"],
+          "path": ["assistant", "ask"]
+        },
+        "description": "Ask about smartwatches with long battery life"
+      }
+    },
+    {
+      "name": "Similar Products - P0001",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/similar/P0001?top_k=5",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "similar", "P0001"],
+          "query": [
+            {
+              "key": "top_k",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Get products similar to P0001"
+      }
+    },
+    {
+      "name": "Similar Products - P0042",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/similar/P0042?top_k=3",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "similar", "P0042"],
+          "query": [
+            {
+              "key": "top_k",
+              "value": "3"
+            }
+          ]
+        },
+        "description": "Get 3 products similar to P0042"
+      }
+    },
+    {
+      "name": "Similar Products - P0100",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/similar/P0100?top_k=5",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "similar", "P0100"],
+          "query": [
+            {
+              "key": "top_k",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Get products similar to P0100"
+      }
+    },
+    {
+      "name": "User Recommendations - U001",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/user/U001?top_k=5",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "user", "U001"],
+          "query": [
+            {
+              "key": "top_k",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Get personalized recommendations for user U001"
+      }
+    },
+    {
+      "name": "User Recommendations - U002",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/user/U002?top_k=5",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "user", "U002"],
+          "query": [
+            {
+              "key": "top_k",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Get personalized recommendations for user U002"
+      }
+    },
+    {
+      "name": "User Recommendations - U050",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/user/U050?top_k=5",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "user", "U050"],
+          "query": [
+            {
+              "key": "top_k",
+              "value": "5"
+            }
+          ]
+        },
+        "description": "Get personalized recommendations for user U050"
+      }
+    },
+    {
+      "name": "Cold Start - All Popular",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/cold-start",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "cold-start"]
+        },
+        "description": "Get most popular products (no category filter)"
+      }
+    },
+    {
+      "name": "Cold Start - Electronics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/cold-start?category=Electronics",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "cold-start"],
+          "query": [
+            {
+              "key": "category",
+              "value": "Electronics"
+            }
+          ]
+        },
+        "description": "Get popular products in Electronics category"
+      }
+    },
+    {
+      "name": "Cold Start - Clothing",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/cold-start?category=Clothing",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "cold-start"],
+          "query": [
+            {
+              "key": "category",
+              "value": "Clothing"
+            }
+          ]
+        },
+        "description": "Get popular products in Clothing category"
+      }
+    },
+    {
+      "name": "Cold Start - Sports",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/recommendations/cold-start?category=Sports",
+          "host": ["{{base_url}}"],
+          "path": ["recommendations", "cold-start"],
+          "query": [
+            {
+              "key": "category",
+              "value": "Sports"
+            }
+          ]
+        },
+        "description": "Get popular products in Sports category"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ]
+}
