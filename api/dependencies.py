@@ -7,10 +7,26 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from cache.redis_cache import close_redis, connect_redis
 
 logger = logging.getLogger(__name__)
+
+# --- Rate Limiting ---
+# Initialize rate limiter with per-IP tracking
+limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+
+# Rate limit definitions by endpoint
+RATE_LIMITS = {
+    "health": "1000/minute",  # Very generous for health checks
+    "search": "30/minute",     # Standard search limit
+    "assistant": "5/minute",   # Strict limit for expensive operations
+    "similar": "20/minute",    # Moderate limit for recommendations
+    "user_rec": "20/minute",   # Moderate limit for recommendations
+    "cold_start": "50/minute", # More generous for cold-start
+}
 
 SEARCH_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "search")
 ASSISTANT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assistant")

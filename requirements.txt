@@ -18,3 +18,5 @@ httpx
 pytest
 pytest-asyncio
 tenacity
+slowapi
+prometheus-client

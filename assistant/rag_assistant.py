@@ -9,6 +9,7 @@ When run as __main__, builds the vectorstore from scratch.
 """
 
 import os
+import re
 import time
 
 import pandas as pd
@@ -20,6 +21,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
+from monitoring.metrics import observe_llm_tokens
+
 load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +31,18 @@ VECTORSTORE_DIR = os.path.join(BASE_DIR, "vectorstore")
 PRODUCTS_CSV = os.path.join(DATA_DIR, "products.csv")
 
 MAX_QUESTION_LENGTH = 1000
+
+# Category keywords for filtering
+CATEGORY_KEYWORDS = {
+    "Electronics": ["phone", "laptop", "headphone", "speaker", "monitor", "keyboard", "mouse", "tablet", "camera", "tv", "watch", "earbuds"],
+    "Clothing": ["shirt", "dress", "jeans", "pants", "jacket", "sweater", "hoodie", "t-shirt", "blazer", "cloth"],
+    "Footwear": ["shoes", "sneaker", "boot", "sandal", "flip-flop", "slipper", "footwear"],
+    "Books": ["book", "guide", "manual", "programming", "python", "javascript"],
+    "Sports": ["badminton", "cricket", "basketball", "yoga", "weights", "dumbbell", "sport", "fitness", "exercise"],
+    "Home": ["mixer", "grinder", "blender", "purifier", "fan", "coolant", "heater", "kettle", "appliance", "home"],
+    "Beauty": ["makeup", "foundation", "lipstick", "cream", "lotion", "shampoo", "skincare", "perfume", "beauty"],
+    "Toys": ["toy", "game", "puzzle", "action", "doll", "lego", "board game"],
+}
 
 SYSTEM_PROMPT = """\
 You are a helpful shopping assistant for an e-commerce platform.
@@ -103,6 +118,101 @@ def _load_vectorstore() -> FAISS:
     )
 
 
+def _extract_relevant_categories(question: str) -> list[str]:
+    """
+    Extract likely product categories from the user's question.
+    Returns list of matching category names.
+    """
+    question_lower = question.lower()
+    matched_categories = []
+    
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        if any(keyword in question_lower for keyword in keywords):
+            matched_categories.append(category)
+    
+    return matched_categories if matched_categories else list(CATEGORY_KEYWORDS.keys())
+
+
+def _extract_budget(question: str) -> tuple[float | None, float | None]:
+    """
+    Extract budget/price range from the question.
+    Returns (min_price, max_price) or (None, None) if not found.
+    
+    Looks for patterns like:
+    - "under 5000" -> max_price=5000
+    - "below 1000" -> max_price=1000
+    - "budget 500-1000" -> min=500, max=1000
+    - "200 to 500" -> min=200, max=500
+    """
+    question_lower = question.lower()
+    min_price = None
+    max_price = None
+    
+    # Pattern: "under/below/within X"
+    under_match = re.search(r'(?:under|below|within|less than|max|upto)\s+(?:₹)?\s*(\d+(?:,\d{3})*)', question_lower)
+    if under_match:
+        max_price = float(under_match.group(1).replace(',', ''))
+    
+    # Pattern: "X to Y" or "X-Y"
+    range_match = re.search(r'(\d+(?:,\d{3})*)\s*(?:to|-|\bas\s)\s*(\d+(?:,\d{3})*)', question_lower)
+    if range_match:
+        min_price = float(range_match.group(1).replace(',', ''))
+        max_price = float(range_match.group(2).replace(',', ''))
+    
+    # Pattern: "budget/price X"
+    budget_match = re.search(r'(?:budget|price)\s+(?:of\s+)?(?:₹)?\s*(\d+(?:,\d{3})*)', question_lower)
+    if budget_match and not range_match:
+        max_price = float(budget_match.group(1).replace(',', ''))
+    
+    return (min_price, max_price)
+
+
+def _filter_and_rank_documents(
+    docs: list[Document],
+    question: str,
+    max_results: int = 5,
+) -> list[Document]:
+    """
+    Filter documents by category and price, rank by relevance.
+    Returns top 3-5 high-confidence products.
+    """
+    # Extract category and budget filters
+    relevant_categories = _extract_relevant_categories(question)
+    min_price, max_price = _extract_budget(question)
+    
+    # Filter by category
+    filtered_docs = [
+        doc for doc in docs
+        if doc.metadata.get("category") in relevant_categories
+    ]
+    
+    # Filter by price range if budget mentioned
+    if min_price is not None or max_price is not None:
+        filtered_docs = [
+            doc for doc in filtered_docs
+            if (
+                (min_price is None or doc.metadata.get("price", float('inf')) >= min_price)
+                and (max_price is None or doc.metadata.get("price", float('inf')) <= max_price)
+            )
+        ]
+    
+    # If no results after filtering, relax constraints
+    if not filtered_docs:
+        # Relax category constraint, keep price
+        filtered_docs = docs
+        if min_price is not None or max_price is not None:
+            filtered_docs = [
+                doc for doc in filtered_docs
+                if (
+                    (min_price is None or doc.metadata.get("price", float('inf')) >= min_price)
+                    and (max_price is None or doc.metadata.get("price", float('inf')) <= max_price)
+                )
+            ]
+    
+    # Return top results (3-5, or fewer if not available)
+    return filtered_docs[:max_results]
+
+
 def _format_docs(docs: list[Document]) -> str:
     """Format retrieved documents into a single context string."""
     return "\n\n---\n\n".join(doc.page_content for doc in docs)
@@ -110,38 +220,31 @@ def _format_docs(docs: list[Document]) -> str:
 
 # Build the LCEL chain
 def _build_chain(vectorstore: FAISS):
-    """Build the RAG chain using LCEL."""
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
-
+    """Build the RAG chain using LCEL (without retriever - we handle retrieval separately)."""
     prompt = ChatPromptTemplate.from_messages([
         ("system", SYSTEM_PROMPT),
         ("human", "{question}"),
     ])
 
     chain = (
-        {
-            "context": retriever | _format_docs,
-            "question": RunnablePassthrough(),
-        }
-        | prompt
+        prompt
         | _llm
         | StrOutputParser()
     )
-    return chain, retriever
+    return chain
 
 
 # Lazy-loaded module state
 _vectorstore = None
 _chain = None
-_retriever = None
 
 
 def _ensure_loaded():
     """Lazy-load vectorstore and chain on first use."""
-    global _vectorstore, _chain, _retriever
+    global _vectorstore, _chain
     if _vectorstore is None:
         _vectorstore = _load_vectorstore()
-        _chain, _retriever = _build_chain(_vectorstore)
+        _chain = _build_chain(_vectorstore)
 
 
 async def ask_assistant(question: str) -> dict:
@@ -162,14 +265,57 @@ async def ask_assistant(question: str) -> dict:
     question = question.strip()
     _ensure_loaded()
 
-    # Get answer and source documents in parallel
-    answer = await _chain.ainvoke(question)
-    source_docs = await _retriever.ainvoke(question)
+    # Phase 1: Retrieve candidates (get more than we need for filtering)
+    raw_docs = await _vectorstore.asimilarity_search(question, k=10)
+    
+    # Phase 2: Filter by category and price (with smart fallback)
+    filtered_docs = _filter_and_rank_documents(raw_docs, question, max_results=5)
+    
+    # Phase 3: Format context for the prompt
+    context = _format_docs(filtered_docs)
+    
+    # Phase 4: Invoke the chain with the filtered context and question
+    config = {}
+    # Token tracking (best-effort, depends on LangChain version)
+    get_openai_callback = None
+    try:
+        from langchain_community.callbacks import get_openai_callback as _get_openai_callback  # type: ignore
 
-    # Extract unique product IDs from retrieved documents
+        get_openai_callback = _get_openai_callback
+    except Exception:
+        try:
+            from langchain.callbacks import get_openai_callback as _get_openai_callback  # type: ignore
+
+            get_openai_callback = _get_openai_callback
+        except Exception:
+            get_openai_callback = None
+
+    if get_openai_callback:
+        with get_openai_callback() as cb:
+            answer = await _chain.ainvoke(
+                {"context": context, "question": question},
+                config=config,
+            )
+
+        try:
+            observe_llm_tokens(
+                model=getattr(_llm, "model_name", getattr(_llm, "model", "unknown")),
+                prompt_tokens=int(getattr(cb, "prompt_tokens", 0)),
+                completion_tokens=int(getattr(cb, "completion_tokens", 0)),
+                total_tokens=int(getattr(cb, "total_tokens", 0)),
+            )
+        except Exception:
+            pass
+    else:
+        answer = await _chain.ainvoke(
+            {"context": context, "question": question},
+            config=config,
+        )
+    
+    # Extract unique product IDs from filtered documents
     source_product_ids = list(dict.fromkeys(
         doc.metadata["product_id"]
-        for doc in source_docs
+        for doc in filtered_docs
         if "product_id" in doc.metadata
     ))
 

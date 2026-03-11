@@ -19,6 +19,19 @@
       }
     },
     {
+      "name": "Metrics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics",
+          "host": ["{{base_url}}"],
+          "path": ["metrics"]
+        },
+        "description": "Prometheus metrics endpoint"
+      }
+    },
+    {
       "name": "Search - Running Shoes",
       "request": {
         "method": "POST",
