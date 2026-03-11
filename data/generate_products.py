@@ -1,7 +1,7 @@
 """
 Generate synthetic product data and user interaction data.
 Produces:
-  - data/products.csv       (1000 products)
+  - data/products.csv       (5000 products)
   - data/user_interactions.csv (5000 interactions)
 """
 
@@ -194,8 +194,8 @@ def main():
     os.makedirs(data_dir, exist_ok=True)
 
     # Generate products
-    print("Generating 1000 products...")
-    products = generate_products(1000)
+    print("Generating 5000 products...")
+    products = generate_products(5000)
     products_path = os.path.join(data_dir, "products.csv")
     with open(products_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=products[0].keys())
